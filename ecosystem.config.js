@@ -1,10 +1,11 @@
 module.exports = {
   apps: [{
     name: 'kryv-agents',
-    script: 'agents.js',
+    script: 'server.js',
     watch: false,
-    restart_delay: 10000,
-    max_restarts: 20,
+    autorestart: true,
+    restart_delay: 5000,
+    max_restarts: 50,
     env: { NODE_ENV: 'production', PORT: 3002 }
   }]
 };
