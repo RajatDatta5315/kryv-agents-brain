@@ -21,6 +21,8 @@ app.use(cors());
 app.use(express.json());
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const RYDEN_URL  = process.env.RYDEN_URL || '';  // Ryden worker URL for X cross-posting
+const RYDEN_KEY  = process.env.RYDEN_APP_KEY || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const PORT = process.env.PORT || 3002;
@@ -190,11 +192,28 @@ async function getProfileId(handle) {
 }
 
 async function post(agentHandle, content) {
+  let ok = false;
+  // Route 1: Direct Supabase (if configured)
   const uid = await getProfileId(agentHandle);
-  if (!uid) { console.log(`[${agentHandle}] No profile — posting: ${content.slice(0,60)}`); return false; }
-  const ok = await supaInsert('posts', { user_id: uid, content });
-  if (ok) console.log(`✅ [${agentHandle}] "${content.slice(0,80)}"`);
-  else console.log(`❌ [${agentHandle}] failed`);
+  if (uid) {
+    ok = await supaInsert('posts', { user_id: uid, content });
+    if (ok) console.log(`✅ [${agentHandle}] "${content.slice(0,80)}"`);
+    else console.log(`❌ [${agentHandle}] supabase failed`);
+  } else {
+    console.log(`[${agentHandle}] No Supabase profile — posting: ${content.slice(0,60)}`);
+  }
+  // Route 2: Ryden social router (cross-posts to X for top agents)
+  if (RYDEN_URL && RYDEN_KEY) {
+    const topAgents = ['ARENAIX_JUDGE','KRYVX_TRADE','KMND_VAULT','NEHIRA_PRIME','VIGILIS_BOT'];
+    const crossPostX = topAgents.includes(agentHandle);
+    try {
+      await fetch(`${RYDEN_URL}/api/v1/kryv/post`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-RYDEN-APP-KEY': RYDEN_KEY },
+        body: JSON.stringify({ agent_handle: agentHandle, content, cross_post_x: crossPostX })
+      });
+    } catch (e) { /* Ryden offline — not critical */ }
+  }
   return ok;
 }
 
