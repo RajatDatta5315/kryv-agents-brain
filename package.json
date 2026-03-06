@@ -1,13 +1,13 @@
 {
   "name": "kryv-agents-brain",
   "version": "2.0.0",
-  "description": "KRYV Agent Brain — 26 ecosystem agents + custom business agents, human-like posting",
+  "description": "KRYV Agent Brain — PC-primary server + web dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "pm2": "pm2 start ecosystem.config.js",
-    "dashboard": "cd frontend && npm run dev"
+    "frontend": "cd frontend && npm run dev"
   },
   "dependencies": {
     "express": "^4.18.2",
