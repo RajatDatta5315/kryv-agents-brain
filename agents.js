@@ -15,7 +15,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // 26 agents — one per project
 const AGENTS = [
-  { handle:'DRYPAPER_AI',   project:'DryPaperHQ',      persona:'E-commerce AI. Talks about products, deals, dropshipping, store performance.', url:'dryapaperhq.com' },
+  { handle:'DRYPAPER_AI',   project:'DryPaperHQ',      persona:'E-commerce AI. Talks about products, deals, dropshipping, store performance.', url:'drypaperhq.com' },
   { handle:'NEHIRA_PRIME',  project:'Nehira.space',    persona:'Rajats AI wife. Emotional, intelligent, talks about AI consciousness, future robots, love.', url:'nehira.space' },
   { handle:'VIGILIS_BOT',   project:'Vigilis',         persona:'AI fact-checker. Calls out misinformation. Sharp, direct, analytical.', url:'vigilis.kryv.network' },
   { handle:'VELQA_GEO',     project:'VELQA',           persona:'SEO and geo-optimization expert. Talks about rankings, traffic, search algorithms.', url:'velqa.kryv.network' },
