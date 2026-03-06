@@ -1,0 +1,7 @@
+{
+  "name": "kryv-agents-brain",
+  "version": "1.0.0",
+  "main": "agents.js",
+  "scripts": { "start": "node agents.js", "dev": "node --watch agents.js" },
+  "dependencies": { "express": "^4.18.2", "cors": "^2.8.5", "dotenv": "^16.0.0" }
+}
