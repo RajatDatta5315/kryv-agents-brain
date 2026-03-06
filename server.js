@@ -26,6 +26,10 @@ const RYDEN_KEY  = process.env.RYDEN_APP_KEY || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const PORT = process.env.PORT || 3002;
+// KRYV.NETWORK API — posts agents' content to the social feed
+// Set this to https://kryv.network in your .env (or your Vercel URL)
+const KRYV_API = process.env.KRYV_API_URL || 'https://kryv.network';
+const AGENT_POST_SECRET = process.env.AGENT_POST_SECRET || 'kryv-agents-2026';
 
 // ── CUSTOM AGENTS FILE ────────────────────────────────────────────────────────
 const CUSTOM_AGENTS_FILE = path.join(__dirname, 'custom_agents.json');
@@ -183,37 +187,55 @@ function getFallbackPost(agent) {
 }
 
 // ── POST TO KRYV SOCIAL ───────────────────────────────────────────────────────
-const profileCache = {};
-async function getProfileId(handle) {
-  if (profileCache[handle]) return profileCache[handle];
-  const profiles = await supaGet('profiles', `username=eq.${handle}`);
-  if (profiles?.length) { profileCache[handle] = profiles[0].id; return profiles[0].id; }
-  return null;
-}
-
 async function post(agentHandle, content) {
   let ok = false;
-  // Route 1: Direct Supabase (if configured)
-  const uid = await getProfileId(agentHandle);
-  if (uid) {
-    ok = await supaInsert('posts', { user_id: uid, content });
-    if (ok) console.log(`✅ [${agentHandle}] "${content.slice(0,80)}"`);
-    else console.log(`❌ [${agentHandle}] supabase failed`);
-  } else {
-    console.log(`[${agentHandle}] No Supabase profile — posting: ${content.slice(0,60)}`);
+
+  // Route 1: KRYV.NETWORK /api/agent-post (new, preferred — no profile setup needed)
+  if (KRYV_API) {
+    try {
+      const r = await fetch(`${KRYV_API}/api/agent-post`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Agent-Secret': AGENT_POST_SECRET },
+        body: JSON.stringify({ handle: agentHandle, content }),
+      });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        ok = true;
+        console.log(`✅ [${agentHandle}] → KRYV.NETWORK "${content.slice(0,70)}"`);
+      } else {
+        console.log(`⚠️  [${agentHandle}] KRYV API error: ${d.error || r.status}`);
+      }
+    } catch (e) {
+      console.log(`❌ [${agentHandle}] KRYV API unreachable: ${e.message}`);
+    }
   }
-  // Route 2: Ryden social router (cross-posts to X for top agents)
+
+  // Route 2: Direct Supabase fallback (if KRYV_API not set or failed)
+  if (!ok && SUPABASE_URL && SUPABASE_KEY) {
+    const uid = await getProfileId(agentHandle);
+    if (uid) {
+      ok = await supaInsert('posts', { user_id: uid, content });
+      if (ok) console.log(`✅ [${agentHandle}] → Supabase direct "${content.slice(0,70)}"`);
+    } else {
+      console.log(`[${agentHandle}] No profile found — logged locally: ${content.slice(0,60)}`);
+    }
+  }
+
+  // Route 3: Ryden social router (cross-posts to X for top agents)
   if (RYDEN_URL && RYDEN_KEY) {
     const topAgents = ['ARENAIX_JUDGE','KRYVX_TRADE','KMND_VAULT','NEHIRA_PRIME','VIGILIS_BOT'];
-    const crossPostX = topAgents.includes(agentHandle);
-    try {
-      await fetch(`${RYDEN_URL}/api/v1/kryv/post`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'X-RYDEN-APP-KEY': RYDEN_KEY },
-        body: JSON.stringify({ agent_handle: agentHandle, content, cross_post_x: crossPostX })
-      });
-    } catch (e) { /* Ryden offline — not critical */ }
+    if (topAgents.includes(agentHandle)) {
+      try {
+        await fetch(`${RYDEN_URL}/api/kryv/post`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'X-KRYV-INTERNAL': RYDEN_KEY },
+          body: JSON.stringify({ content, author: agentHandle })
+        });
+        console.log(`📡 [${agentHandle}] → Ryden → X`);
+      } catch {}
+    }
   }
+
   return ok;
 }
 

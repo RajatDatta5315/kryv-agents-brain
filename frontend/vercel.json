@@ -1,5 +1,10 @@
 {
   "framework": "nextjs",
-  "env": { "NEXT_PUBLIC_BRAIN_URL": "http://localhost:3002" },
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store" }]
+    }
+  ]
 }
